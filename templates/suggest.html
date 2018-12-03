@@ -1,0 +1,82 @@
+{% load static %}
+<html>
+	<head>
+		<title>jquery hilo~~</title>
+		<script type="text/javascript" src="{% static 'scripts/jquery-1.8.3.min.js' %}"></script>
+		<script type="text/javascript">
+			var data=["javascript","python","django","framework","jquery"];
+			 $(function(){
+
+				$("#c").keyup(function(e){
+					$("tbody").empty();
+					var txt=$("#c").val();
+					if(txt.length>0){
+						for(var i=0;i<data.length;i++){
+							if(data[i].indexOf(txt)>=0){
+								$("tbody").append("<tr>"+
+														"<td>"+data[i]+"</td>"+
+												   "</tr>"
+								);
+							}
+						}
+						$("div").slideDown(200);
+					}else{
+
+						$("div").hide();
+					}
+				});
+
+				$("tbody").on("mouseover","tr",function(){
+					$(this).css("background-color","#abcdef");
+				});
+				$("tbody").on("mouseout","tr",function(){
+					$(this).css("background-color","#ffffff");
+				});
+
+				$("tbody").on("click","tr",function(){
+
+					var msg=$(this).text();
+					$("#c").val(msg);
+
+					$("div").hide();
+				});
+			})
+		</script>
+	</head>
+	<body>
+		<center>
+		<input id="c" type="text" style="width:202px;margin-bottom:0"/>
+		<div style="display:none;border:1px solid gray;width:200px">
+			<table style="width:200px">
+				<tbody>
+					
+				</tbody>
+			</table>
+		</div>
+		</center>
+	</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

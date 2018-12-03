@@ -1,0 +1,342 @@
+﻿<!DOCTYPE html>
+{% load static %}
+<html lang="zh-CN">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>百智招聘</title>
+	<link href="{% static 'style/authority/main_css.css' %}" rel="stylesheet" type="text/css" />
+	<link href="{% static 'style/authority/zTreeStyle.css' %}" rel="stylesheet" type="text/css">
+	<script type="text/javascript" src="{% static 'scripts/jquery/jquery-1.7.1.js' %}"></script>
+	<script type="text/javascript" src="{% static 'scripts/zTree/jquery.ztree.core-3.2.js' %}"></script>
+	<script type="text/javascript" src="{% static 'scripts/authority/commonAll.js' %}"></script>
+	<script type="text/javascript">
+		/* zTree插件加载目录的处理  */
+		var zTree;
+		
+		var setting = {
+				view: {
+					dblClickExpand: false,
+					showLine: false,
+					expandSpeed: ($.browser.msie && parseInt($.browser.version)<=6)?"":"fast"
+				},
+				data: {
+					key: {
+						name: "resourceName"
+					},
+					simpleData: {
+						enable:true,
+						idKey: "resourceID",
+						pIdKey: "parentID",
+						rootPId: ""
+					}
+				},
+				callback: {
+	// 				beforeExpand: beforeExpand,
+	// 				onExpand: onExpand,
+					onClick: zTreeOnClick			
+				}
+		};
+		 
+		var curExpandNode = null;
+		function beforeExpand(treeId, treeNode) {
+			var pNode = curExpandNode ? curExpandNode.getParentNode():null;
+			var treeNodeP = treeNode.parentTId ? treeNode.getParentNode():null;
+			for(var i=0, l=!treeNodeP ? 0:treeNodeP.children.length; i<l; i++ ) {
+				if (treeNode !== treeNodeP.children[i]) {
+					zTree.expandNode(treeNodeP.children[i], false);
+				}
+			}
+			while (pNode) {
+				if (pNode === treeNode) {
+					break;
+				}
+				pNode = pNode.getParentNode();
+			}
+			if (!pNode) {
+				singlePath(treeNode);
+			}
+	
+		}
+		function singlePath(newNode) {
+			if (newNode === curExpandNode) return;
+			if (curExpandNode && curExpandNode.open==true) {
+				if (newNode.parentTId === curExpandNode.parentTId) {
+					zTree.expandNode(curExpandNode, false);
+				} else {
+					var newParents = [];
+					while (newNode) {
+						newNode = newNode.getParentNode();
+						if (newNode === curExpandNode) {
+							newParents = null;
+							break;
+						} else if (newNode) {
+							newParents.push(newNode);
+						}
+					}
+					if (newParents!=null) {
+						var oldNode = curExpandNode;
+						var oldParents = [];
+						while (oldNode) {
+							oldNode = oldNode.getParentNode();
+							if (oldNode) {
+								oldParents.push(oldNode);
+							}
+						}
+						if (newParents.length>0) {
+							for (var i = Math.min(newParents.length, oldParents.length)-1; i>=0; i--) {
+								if (newParents[i] !== oldParents[i]) {
+									zTree.expandNode(oldParents[i], false);
+									break;
+								}
+							}
+						}else {
+							zTree.expandNode(oldParents[oldParents.length-1], false);
+						}
+					}
+				}
+			}
+			curExpandNode = newNode;
+		}
+	
+		function onExpand(event, treeId, treeNode) {
+			curExpandNode = treeNode;
+		}
+		
+		/** 用于捕获节点被点击的事件回调函数  **/
+		function zTreeOnClick(event, treeId, treeNode) {
+			var zTree = $.fn.zTree.getZTreeObj("dleft_tab1");
+			zTree.expandNode(treeNode, null, null, null, true);
+	// 		zTree.expandNode(treeNode);
+			// 规定：如果是父类节点，不允许单击操作
+			if(treeNode.isParent){
+	// 			alert("父类节点无法点击哦...");
+				return false;
+			}
+			// 如果节点路径为空或者为"#"，不允许单击操作
+			if(treeNode.accessPath=="" || treeNode.accessPath=="#"){
+				//alert("节点路径为空或者为'#'哦...");
+				return false;
+			}
+		    // 跳到该节点下对应的路径, 把当前资源ID(resourceID)传到后台，写进Session
+		    rightMain(treeNode.accessPath);
+		    
+		    if( treeNode.isParent ){
+			    $('#here_area').html('当前位置：'+treeNode.getParentNode().resourceName+'&nbsp;>&nbsp;<span style="color:#1A5CC6">'+treeNode.resourceName+'</span>');
+		    }else{
+			    $('#here_area').html('当前位置：系统&nbsp;>&nbsp;<span style="color:#1A5CC6">'+treeNode.resourceName+'</span>');
+		    }
+		};
+		
+		/* 上方菜单 */
+		function switchTab(tabpage,tabid){
+		var oItem = document.getElementById(tabpage).getElementsByTagName("li"); 
+		    for(var i=0; i<oItem.length; i++){
+		        var x = oItem[i];    
+		        x.className = "";
+			}
+			if('left_tab1' == tabid){
+				$(document).ajaxStart(onStart).ajaxSuccess(onStop);
+			
+			  	loadMenu('YEWUMOKUAI', 'dleft_tab1');
+			}else  if('left_tab2' == tabid){
+				$(document).ajaxStart(onStart).ajaxSuccess(onStop);
+		
+				loadMenu('XITONGMOKUAI', 'dleft_tab1');
+			}else  if('left_tab3' == tabid){
+				$(document).ajaxStart(onStart).ajaxSuccess(onStop);
+	
+				loadMenu('QITAMOKUAI', 'dleft_tab1');
+			} 
+		}
+		
+		
+		$(document).ready(function(){
+			$(document).ajaxStart(onStart).ajaxSuccess(onStop);
+
+			loadMenu('YEWUMOKUAI', "dleft_tab1");
+			// 默认展开所有节点
+			if( zTree ){
+				// 默认展开所有节点
+				zTree.expandAll(true);
+			}
+		});
+		
+		function loadMenu(resourceType, treeObj){
+			
+            data = [ 
+			{"accessPath":"","checked":false,"delFlag":0,"parentID":1,"resourceCode":"","resourceDesc":"","resourceGrade":2,"resourceID":3,"resourceName":"北京","resourceOrder":0,"resourceType":""},
+            {"accessPath":"","checked":false,"delFlag":0,"parentID":1,"resourceCode":"","resourceDesc":"","resourceGrade":2,"resourceID":4,"resourceName":"上海","resourceOrder":0,"resourceType":""},
+            {"accessPath":"","checked":false,"delFlag":0,"parentID":1,"resourceCode":"","resourceDesc":"","resourceGrade":2,"resourceID":5,"resourceName":"广州","resourceOrder":0,"resourceType":""},
+            {"accessPath":"","checked":false,"delFlag":0,"parentID":1,"resourceCode":"","resourceDesc":"","resourceGrade":2,"resourceID":6,"resourceName":"深圳","resourceOrder":0,"resourceType":""},
+
+            {"accessPath":"{% url 'recruit:page' %}?city=北京&category=Python","checked":false,"delFlag":0,"parentID":3,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":7,"resourceName":"Python","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=北京&category=爬虫","checked":false,"delFlag":0,"parentID":3,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":8,"resourceName":"爬虫","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=北京&category=大数据","checked":false,"delFlag":0,"parentID":3,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":9,"resourceName":"大数据","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=北京&category=AI","checked":false,"delFlag":0,"parentID":3,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":10,"resourceName":"AI","resourceOrder":0,"resourceType":""},
+			{"accessPath":"{% url 'recruit:page' %}?city=上海&category=Python","checked":false,"delFlag":0,"parentID":4,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":11,"resourceName":"Python","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=上海&category=爬虫","checked":false,"delFlag":0,"parentID":4,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":12,"resourceName":"爬虫","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=上海&category=大数据","checked":false,"delFlag":0,"parentID":4,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":13,"resourceName":"大数据","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=上海&category=AI","checked":false,"delFlag":0,"parentID":4,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":14,"resourceName":"AI","resourceOrder":0,"resourceType":""},
+			{"accessPath":"{% url 'recruit:page' %}?city=广州&category=Python","checked":false,"delFlag":0,"parentID":5,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":15,"resourceName":"Python","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=广州&category=爬虫","checked":false,"delFlag":0,"parentID":5,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":16,"resourceName":"爬虫","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=广州&category=大数据","checked":false,"delFlag":0,"parentID":5,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":17,"resourceName":"大数据","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=广州&category=AI","checked":false,"delFlag":0,"parentID":5,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":18,"resourceName":"AI","resourceOrder":0,"resourceType":""},
+			{"accessPath":"{% url 'recruit:page' %}?city=深圳&category=Python","checked":false,"delFlag":0,"parentID":6,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":15,"resourceName":"Python","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=深圳&category=爬虫","checked":false,"delFlag":0,"parentID":6,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":16,"resourceName":"爬虫","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=深圳&category=大数据","checked":false,"delFlag":0,"parentID":6,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":17,"resourceName":"大数据","resourceOrder":0,"resourceType":""},
+            {"accessPath":"{% url 'recruit:page' %}?city=深圳&category=AI","checked":false,"delFlag":0,"parentID":6,"resourceCode":"","resourceDesc":"","resourceGrade":3,"resourceID":18,"resourceName":"AI","resourceOrder":0,"resourceType":""}];
+
+            if(data != null){
+                // 将返回的数据赋给zTree
+                $.fn.zTree.init($("#"+treeObj), setting, data);
+//              alert(treeObj);
+                zTree = $.fn.zTree.getZTreeObj(treeObj);
+                if( zTree ){
+                    // 默认展开所有节点
+                    zTree.expandAll(true);
+                }
+            }
+		}
+		
+		//ajax start function
+		function onStart(){
+			$("#ajaxDialog").show();
+		}
+		
+		//ajax stop function
+		function onStop(){
+	// 		$("#ajaxDialog").dialog("close");
+			$("#ajaxDialog").hide();
+		}
+	</script>
+</head>
+<body >
+    <div id="top">
+		<div id="top_logo">
+			<img alt="logo" src="{% static 'images/common/logo.jpg' %}" width="274" height="49" style="vertical-align:middle;">
+		</div>
+		
+	
+	</div>
+    <!-- side menu start -->
+	<div id="side">
+		<div id="left_menu">
+		 	<ul id="TabPage2" style="height:200px; margin-top:50px;">
+				
+			</ul>
+			
+			
+			<div id="nav_show" style="position:absolute; bottom:0px; padding:10px;">
+				<a href="javascript:;" id="show_hide_btn">
+					<img alt="显示/隐藏" title="显示/隐藏" src="{% static 'images/common/nav_hide.png' %}" width="35" height="35">
+				</a>
+			</div>
+		 </div>
+		 <div id="left_menu_cnt">
+		 	<div id="nav_module">
+		 		<img src="{% static 'images/common/module_1.png' %}" width="210" height="58"/>
+		 	</div>
+		 	<div id="nav_resource">
+		 		<ul id="dleft_tab1" class="ztree">
+                    <li id="dleft_tab1_1" class="level0" tabindex="0" hidefocus="true" treenode="">
+                        <span id="dleft_tab1_1_switch" title="" class="button level0 switch noline_open" treenode_switch=""></span>
+                        <a id="dleft_tab1_1_a" class="level0" treenode_a="" onclick="" target="_blank" style="" title="北京">
+                            <span id="dleft_tab1_1_ico" title="" treenode_ico="" class="button ico_open" style=""></span>
+                            <span id="dleft_tab1_1_span">北京</span>
+                        </a>
+                        <ul id="dleft_tab1_1_ul" class="level0 " style="">
+                            <li id="dleft_tab1_2" class="level1" tabindex="0" hidefocus="true" treenode="">
+                                <span id="dleft_tab1_2_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span>
+                                <a id="dleft_tab1_2_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="Python" >
+                                    <span id="dleft_tab1_2_ico" title="" treenode_ico="" class="button ico_docu" style=""></span>
+                                    <span id="dleft_tab1_2_span">Python</span></a>
+                            </li>
+                            <li id="dleft_tab1_3" class="level1" tabindex="0" hidefocus="true" treenode="">
+                                <span id="dleft_tab1_3_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span>
+                                <a id="dleft_tab1_3_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="爬虫">
+                                    <span id="dleft_tab1_3_ico" title="" treenode_ico="" class="button ico_docu" style=""></span>
+                                    <span id="dleft_tab1_3_span">爬虫</span>
+                                </a>
+                            </li>
+                            <li id="dleft_tab1_4" class="level1" tabindex="0" hidefocus="true" treenode="">
+                                <span id="dleft_tab1_4_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span>
+                                <a id="dleft_tab1_4_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="大数据">
+                                    <span id="dleft_tab1_4_ico" title="" treenode_ico="" class="button ico_docu" style="">
+                                    </span><span id="dleft_tab1_4_span">大数据</span>
+                                </a>
+                            </li>
+                            <li id="dleft_tab1_5" class="level1" tabindex="0" hidefocus="true" treenode="">
+                                <span id="dleft_tab1_5_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span>
+                                <a id="dleft_tab1_5_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="AI">
+                                    <span id="dleft_tab1_5_ico" title="" treenode_ico="" class="button ico_docu" style=""></span>
+                                    <span id="dleft_tab1_5_span">AI</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li id="dleft_tab1_6" class="level0" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_6_switch" title="" class="button level0 switch noline_open" treenode_switch=""></span><a id="dleft_tab1_6_a" class="level0" treenode_a="" onclick="" target="_blank" style="" title="上海"><span id="dleft_tab1_6_ico" title="" treenode_ico="" class="button ico_open" style=""></span><span id="dleft_tab1_6_span">上海</span></a><ul id="dleft_tab1_6_ul" class="level0 " style=""><li id="dleft_tab1_7" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_7_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_7_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="Python Web"><span id="dleft_tab1_7_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_7_span">Python Web</span></a></li><li id="dleft_tab1_8" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_8_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_8_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="爬虫"><span id="dleft_tab1_8_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_8_span">爬虫</span></a></li><li id="dleft_tab1_9" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_9_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_9_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="大数据"><span id="dleft_tab1_9_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_9_span">大数据</span></a></li><li id="dleft_tab1_10" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_10_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_10_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="AI"><span id="dleft_tab1_10_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_10_span">AI</span></a></li></ul></li><li id="dleft_tab1_11" class="level0" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_11_switch" title="" class="button level0 switch noline_open" treenode_switch=""></span><a id="dleft_tab1_11_a" class="level0" treenode_a="" onclick="" target="_blank" style="" title="广州"><span id="dleft_tab1_11_ico" title="" treenode_ico="" class="button ico_open" style=""></span><span id="dleft_tab1_11_span">广州</span></a><ul id="dleft_tab1_11_ul" class="level0 " style=""><li id="dleft_tab1_12" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_12_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_12_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="Python Web"><span id="dleft_tab1_12_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_12_span">Python Web</span></a></li><li id="dleft_tab1_13" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_13_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_13_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="爬虫"><span id="dleft_tab1_13_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_13_span">爬虫</span></a></li><li id="dleft_tab1_14" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_14_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_14_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="大数据"><span id="dleft_tab1_14_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_14_span">大数据</span></a></li><li id="dleft_tab1_15" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_15_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_15_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="AI"><span id="dleft_tab1_15_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_15_span">AI</span></a></li></ul></li><li id="dleft_tab1_16" class="level0" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_16_switch" title="" class="button level0 switch noline_open" treenode_switch=""></span><a id="dleft_tab1_16_a" class="level0" treenode_a="" onclick="" target="_blank" style="" title="深圳"><span id="dleft_tab1_16_ico" title="" treenode_ico="" class="button ico_open" style=""></span><span id="dleft_tab1_16_span">深圳</span></a><ul id="dleft_tab1_16_ul" class="level0 " style=""><li id="dleft_tab1_17" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_17_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_17_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="Python Web"><span id="dleft_tab1_17_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_17_span">Python Web</span></a></li><li id="dleft_tab1_18" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_18_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_18_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="爬虫"><span id="dleft_tab1_18_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_18_span">爬虫</span></a></li><li id="dleft_tab1_19" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_19_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_19_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="大数据"><span id="dleft_tab1_19_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_19_span">大数据</span></a></li><li id="dleft_tab1_20" class="level1" tabindex="0" hidefocus="true" treenode=""><span id="dleft_tab1_20_switch" title="" class="button level1 switch noline_docu" treenode_switch=""></span><a id="dleft_tab1_20_a" class="level1" treenode_a="" onclick="" target="_blank" style="" title="AI"><span id="dleft_tab1_20_ico" title="" treenode_ico="" class="button ico_docu" style=""></span><span id="dleft_tab1_20_span">AI</span></a></li></ul></li>
+                </ul>
+		 	</div>
+		 </div>
+	</div>
+	<script type="text/javascript">
+		$(function(){
+			$('#TabPage2 li').click(function(){
+				var index = $(this).index();
+				$(this).find('img').attr('src', 'images/common/'+ (index+1) +'_hover.jpg');
+				$(this).css({background:'#fff'});
+				$('#nav_module').find('img').attr('src', 'images/common/module_'+ (index+1) +'.png');
+				$('#TabPage2 li').each(function(i, ele){
+					if( i!=index ){
+						$(ele).find('img').attr('src', 'images/common/'+ (i+1) +'.jpg');
+						$(ele).css({background:'#044599'});
+					}
+				});
+				// 显示侧边栏
+				switchSysBar(true);
+			});
+			
+			// 显示隐藏侧边栏
+			$("#show_hide_btn").click(function() {
+		        switchSysBar();
+		    });
+		});
+		
+		/**隐藏或者显示侧边栏**/
+		function switchSysBar(flag){
+			var side = $('#side');
+	        var left_menu_cnt = $('#left_menu_cnt');
+			if( flag==true ){	// flag==true
+				left_menu_cnt.show(500, 'linear');
+				side.css({width:'280px'});
+				$('#top_nav').css({width:'77%', left:'304px'});
+	        	$('#main').css({left:'280px'});
+			}else{
+		        if ( left_menu_cnt.is(":visible") ) {
+					left_menu_cnt.hide(10, 'linear');
+					side.css({width:'60px'});
+		        	$('#top_nav').css({width:'100%', left:'60px', 'padding-left':'28px'});
+		        	$('#main').css({left:'60px'});
+		        	$("#show_hide_btn").find('img').attr('src', '{% static "images/common/nav_show.png" %}');
+		        } else {
+					left_menu_cnt.show(500, 'linear');
+					side.css({width:'280px'});
+					$('#top_nav').css({width:'77%', left:'304px', 'padding-left':'0px'});
+		        	$('#main').css({left:'280px'});
+		        	$("#show_hide_btn").find('img').attr('src', '{% static "images/common/nav_hide.png" %}');
+		        }
+			}
+		}
+	</script>
+    <!-- side menu start -->
+    <div id="top_nav">
+	 	<span id="here_area">当前位置：系统&nbsp;>&nbsp;系统介绍</span>
+	</div>
+    <div id="main">
+      	<iframe name="right" id="rightMain" src="{% url 'recruit:introduce' %}" frameborder="no" scrolling="auto" width="100%" height="100%" allowtransparency="true"/>
+    </div>
+
+</body>
+</html>
+   
+ 

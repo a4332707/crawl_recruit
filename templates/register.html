@@ -1,0 +1,205 @@
+<!doctype html>
+{% load static %}
+<html>
+<head>
+<title>Home</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="keywords" content="" />
+<script type="application/x-javascript"> addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false); function hideURLbar(){ window.scrollTo(0,1); } </script>
+<!-- font files  -->
+<link href='{% static "https://fonts.googleapis.com/css?family=Muli:400,300" %}' rel='stylesheet' type='text/css'>
+<link href='{% static "https://fonts.googleapis.com/css?family=Nunito:400,300,700" %}' rel='stylesheet' type='text/css'>
+<script src="{% static 'scripts/jquery/jquery-1.4.4.min.js' %}"></script>
+<!-- /font files  -->
+<!-- css files -->
+<link href="{% static "css/style.css" %}" rel='stylesheet' type='text/css' media="all" />
+<!-- /css files -->
+</head>
+<body>
+<h1>Register</h1>
+<div class="log">
+	<div class="content2">
+		<h2>Register</h2>
+		<form  method="get" action="{% url 'lr:register_logic' %}">
+            <input type="text" name="username" value="USERNAME" onfocus="this.value = '';" onblur="if (this.value == '') {this.value = 'NAME AND SURNAME';}">
+			<input type="tel" name="telephone" value="PHONE" onfocus="this.value = '';" onblur="if (this.value == '') {this.value = 'PHONE';}">
+			<input type="email" name="email" value="EMAIL ADDRESS" onfocus="this.value = '';" onblur="if (this.value == '') {this.value = 'EMAIL ADDRESS';}">
+            <input type="text" name="check_email" value="请输入您获得邮箱验证码" onfocus="this.value = '';" onblur="if (this.value == '') {this.value = 'EMAIL CAPTCHA';}">
+			<input type="button" name="captcha" value="点击获取验证码"/>
+            <input type="password" name="password" value="PASSWORD" onfocus="this.value = '';" onblur="if (this.value == '') {this.value = 'PASSWORD';}">
+			<input type="submit"   class="register" value="Register">
+		</form>
+        <script type="text/javascript">
+            $("[class='register']").click(function () {
+                var username=$("input[name='username']").val();
+                var password=$("input[name='password']").val();
+                var email=$("[name='email']").val();
+                var telephone=$("[name='telephone']").val;
+                console.log(username,password,email,telephone,'账户密码是');
+                var csrftoken="{{ csrf_token }}";
+                $.ajaxSetup({headers:{"X-CSRFToken":csrftoken}});
+                $.ajax({
+                    type:"get",
+                    url:"{% url "lr:ajax_username_password" %}",
+                    data:"username="+username+'&password='+password+'&email'+email+'&telephone='+telephone,
+                    dataType:"json",
+                    success:function(resp) {
+                        if (resp==1){
+                            location.href = "{% url 'lr:login' %}"
+                        }else if (resp==0){
+                            alert('有错误注册信息,请重新核对')
+                        }
+                    }
+                })
+            }
+
+
+            );
+        </script>
+
+
+{#               验证账户密码                  #}
+        <script type="text/javascript">
+            $("[name='password']").blur(function () {
+                var username=$("input[name='username']").val();
+                var password=$("input[name='password']").val();
+
+                console.log(username,password,'账户密码是');
+                var csrftoken="{{ csrf_token }}";
+                $.ajaxSetup({headers:{"X-CSRFToken":csrftoken}});
+                $.ajax({
+                    type:"get",
+                    url:"{% url "lr:ajax_username_password" %}",
+                    data:"username="+username+'&password='+password,
+                    dataType:"json",
+                    success:function(resp) {
+                        if (resp==0){
+                            $("[name='username']").attr('value','错误!!!账号或密码长度应大于6位.')
+                        }else if(resp==2){
+                            $("[name='username']").attr('value','该用户名已注册,请更换.')
+                        }else{
+                            console.log(resp,'账号密码验证成功')
+                        }
+                    }
+                })
+            }
+
+
+            );
+        </script>
+
+{#                 邮箱验证码核对                                          #}
+        <script type="text/javascript">
+            $("[name='check_email']").blur(function () {
+                var captcha=$("input[name='check_email']").val();
+                console.log(captcha,'邮箱');
+                var csrftoken="{{ csrf_token }}";
+                $.ajaxSetup({headers:{"X-CSRFToken":csrftoken}});
+                $.ajax({
+                    type:"get",
+                    url:"{% url "lr:check_email" %}",
+                    data:"captcha="+captcha,
+                    dataType:"json",//声明当前的响应为json格式，则success中的abc就是解析后的js对象
+                    success:function(resp) {
+                        if (resp==0){
+                            $("[name='check_email']").attr('value','错误,请输入正确的验证码')
+                        }else{
+                            console.log(resp,'邮箱验证成功')
+                        }
+                    }
+                })
+            }
+
+
+            );
+        </script>
+
+
+
+{#                               邮箱获取验证码                                         #}
+        <script type="text/javascript">
+            $("[name='captcha']").click(function () {
+                var email=$("input[name='email']").val();
+                console.log(email,'邮箱');
+                var csrftoken="{{ csrf_token }}";
+                $.ajaxSetup({headers:{"X-CSRFToken":csrftoken}});
+                $.ajax({
+                    type:"get",
+                    url:"{% url "lr:get_captcha" %}",
+                    data:"email="+email,
+                    dataType:"json",//声明当前的响应为json格式，则success中的abc就是解析后的js对象
+                    success:function(resp) {
+                        console.log(resp,'成功')
+                    }
+                })
+            }
+            );
+        </script>
+
+{#                     验证电话号是否有效的                     #}
+        <script type="text/javascript">
+            $("input[name='telephone']").blur(function () {
+                var telephone=$("input[name='telephone']").val();
+                console.log(telephone,'电话号码');
+                var csrftoken="{{ csrf_token }}";
+                $.ajaxSetup({headers:{"X-CSRFToken":csrftoken}});
+                $.ajax({
+                    type:"get",
+                    url:"{% url "lr:ajax_telephone" %}",
+                    data:"telephone="+telephone,
+                    dataType:"json",//声明当前的响应为json格式，则success中的abc就是解析后的js对象
+                    success:function(resp) {
+                        if (resp=='1'){
+                            console.log(1111);
+                            $("[name='telephone']").attr('value','请输入有效的电话号')
+                        }else if (resp=='2') {
+                            $("[name='telephone']").attr('value','该电话号已注册')
+                        }else {
+                            console.log('成功')
+                        }
+                    }
+                })
+            }
+
+
+            );
+        </script>
+
+{#        异步验证邮箱#}
+        <script type="text/javascript">
+            $("[name='email']").blur(function () {
+                var email=$("input[name='email']").val();
+                console.log(email,'邮箱');
+                var csrftoken="{{ csrf_token }}";
+                $.ajaxSetup({headers:{"X-CSRFToken":csrftoken}});
+                $.ajax({
+                    type:"get",
+                    url:"{% url "lr:ajax_email" %}",
+                    data:"email="+email,
+                    dataType:"json",//声明当前的响应为json格式，则success中的abc就是解析后的js对象
+                    success:function(resp) {
+                        if (resp=='1'){
+                            console.log(1111);
+                            $("[name='email']").attr('value','请输入有效的邮箱')
+                        }else if (resp=='2') {
+                            $("[name='email']").attr('value','该邮箱已注册')
+                        }else {
+                            console.log('成功')
+                        }
+                    }
+                })
+            }
+
+
+            );
+        </script>
+	</div>
+	<div class="clear"></div>
+</div>
+<div class="footer">
+	<p>Copyright &copy;  <a href="http://www.baizhiedu.com/" target="_blank" title="百知教育">百知教育</a></p>
+</div>
+
+</body>
+</html>
